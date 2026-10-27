@@ -1,0 +1,20 @@
+{
+  "name": "Cristal Split Diagonal",
+  "typology": "split_diagonal",
+  "description": "Relevo assimétrico facetado com crista diagonal e reflexos dinâmicos de luz (Fotos 1 e 3).",
+  "params": {
+    "typology": "split_diagonal",
+    "width": 700.0,
+    "height": 1100.0,
+    "depth": 160.0,
+    "split_p1_x": 0.35,
+    "split_p1_y": 0.25,
+    "split_p2_x": 0.65,
+    "split_p2_y": 0.75,
+    "flange_width": 40.0,
+    "relief_angle": 45.0,
+    "rivet_holes": true,
+    "rivet_spacing": 150.0,
+    "rivet_dia": 4.5
+  }
+}

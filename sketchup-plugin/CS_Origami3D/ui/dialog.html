@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>CS Origami 3D · Estúdio de Volumetria & Facetação em ACM</title>
+  <link rel="stylesheet" href="dialog.css">
+  <!-- Three.js e OrbitControls Locais (100% Offline no SketchUp) -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
+</head>
+<body>
+
+  <!-- Topo / Barra de Navegação -->
+  <header>
+    <div class="logo-area">
+      <div class="brand-icon">3D</div>
+      <span class="brand-title">CS Origami 3D</span>
+      <span class="badge">ACM Volumétrico</span>
+    </div>
+
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="creator">1. Criador 3D & Geometria</button>
+      <button class="tab-btn" data-tab="unfold">2. Planificação 2D & CNC</button>
+      <button class="tab-btn" data-tab="tessellation">3. Multiplicar Painel</button>
+      <button class="tab-btn" data-tab="library">4. Biblioteca de Modelos</button>
+    </nav>
+  </header>
+
+  <!-- Área Central de Trabalho -->
+  <main class="workspace">
+
+    <!-- Viewport Visual Interativo (3D Three.js ou 2D SVG) -->
+    <div class="viewport-panel">
+      <!-- Visualizador WebGL 3D -->
+      <div id="viewport-3d"></div>
+
+      <!-- Visualizador 2D SVG de Chapa Planificada -->
+      <div id="viewport-2d"></div>
+
+      <!-- Badges de Status Flutuantes -->
+      <div class="viewport-overlay">
+        <div class="overlay-badge">
+          Dimensões: <span id="stat-dims" style="color:#60A5FA;">600 × 1000 × 140 mm</span>
+        </div>
+        <div class="overlay-badge">
+          Área Superfície: <span id="stat-area" style="color:#34D399;">0.69 m²</span>
+        </div>
+      </div>
+
+      <!-- Seletor de Cores / Acabamentos de ACM (Alucobond) -->
+      <div class="material-selector" title="Acabamento da Chapa de ACM">
+        <div class="swatch active" data-material="red_glossy" style="background:#DC2626;" title="Vermelho Brilhante"></div>
+        <div class="swatch" data-material="silver_metallic" style="background:#E2E8F0;" title="Prata Metálico"></div>
+        <div class="swatch" data-material="charcoal_titanium" style="background:#334155;" title="Grafite / Titânio"></div>
+        <div class="swatch" data-material="gold_champagne" style="background:#D97706;" title="Dourado Champagne"></div>
+        <div class="swatch" data-material="black_matte" style="background:#1E293B;" title="Preto Fosco"></div>
+        <div class="swatch" data-material="pure_white" style="background:#FFFFFF;" title="Branco Puro"></div>
+      </div>
+
+      <!-- Barra de Ferramentas da Viewport -->
+      <div class="viewport-tools">
+        <button id="btn-toggle-folds" class="tool-chip active">Vincos / Dobras</button>
+        <div class="tool-chip" style="display:flex;align-items:center;gap:6px;">
+          <span>Sol:</span>
+          <input type="range" id="slider-sun-azimuth" min="0" max="360" value="45" style="width:70px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra Lateral de Controles e Parâmetros -->
+    <aside class="controls-sidebar">
+
+      <!-- ABA 1: CRIADOR 3D & GEOMETRIA -->
+      <div id="tab-creator" class="tab-pane active">
+
+        <!-- Seleção de Tipologia -->
+        <div class="section-card">
+          <div class="section-title">Família de Dobradura / Origami</div>
+          <div class="typology-grid">
+            <div class="typology-card active" data-typology="diamond_classic">
+              <div class="typology-icon">💎</div>
+              <div class="typology-name">Diamante Facetado</div>
+            </div>
+            <div class="typology-card" data-typology="yoshimura_chevron">
+              <div class="typology-icon">⚡</div>
+              <div class="typology-name">Yoshimura (Chevron)</div>
+            </div>
+            <div class="typology-card" data-typology="split_diagonal">
+              <div class="typology-icon">📐</div>
+              <div class="typology-name">Split Diagonal</div>
+            </div>
+            <div class="typology-card" data-typology="pyramid">
+              <div class="typology-icon">▲</div>
+              <div class="typology-name">Pirâmide Truncada</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dimensões Gerais -->
+        <div class="section-card">
+          <div class="section-title">Dimensões do Bloco (mm)</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Largura (X)</label>
+              <input type="number" id="param-width" value="600" step="10">
+            </div>
+            <div class="form-group">
+              <label>Altura (Y)</label>
+              <input type="number" id="param-height" value="1000" step="10">
+            </div>
+            <div class="form-group">
+              <label>Profundidade (Z)</label>
+              <input type="number" id="param-depth" value="140" step="5">
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles Específicos para Diamante -->
+        <div id="section-diamond" class="section-card">
+          <div class="section-title">Deslocamento do Ápice Central</div>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label>Posição X do Ápice (%): <span id="slider-cx-val">50%</span></label>
+            <input type="range" id="slider-cx" min="0.1" max="0.9" step="0.05" value="0.5">
+          </div>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label>Posição Y do Ápice (%): <span id="slider-cy-val">50%</span></label>
+            <input type="range" id="slider-cy" min="0.1" max="0.9" step="0.05" value="0.5">
+          </div>
+          <div class="form-group">
+            <label>Elevação das Bordas (Edge Z)</label>
+            <input type="number" id="param-edge-z" value="0" step="5">
+          </div>
+        </div>
+
+        <!-- Controles Específicos para Yoshimura (Chevron) -->
+        <div id="section-chevron" class="section-card" style="display:none;">
+          <div class="section-title">Parâmetros Yoshimura / Chevron</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Divisões Verticais (Linhas)</label>
+              <input type="number" id="param-chevron-rows" value="3" min="1" max="8">
+            </div>
+            <div class="form-group">
+              <label>Divisões Horizontais (Colunas)</label>
+              <input type="number" id="param-chevron-cols" value="2" min="1" max="6">
+            </div>
+          </div>
+        </div>
+
+        <!-- Abas Perimetrais e Fixações -->
+        <div class="section-card">
+          <div class="section-title">Abas de Montagem / Flanges (Usinagem)</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Largura da Aba (mm)</label>
+              <input type="number" id="param-flange-w" value="35" min="20" max="60" step="5">
+            </div>
+            <div class="form-group">
+              <label>Alívio de Canto (°)</label>
+              <input type="number" id="param-relief-ang" value="45" min="30" max="60">
+            </div>
+          </div>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-rivets" checked>
+            <span>Furações de Rebite nas Abas (CNC)</span>
+          </label>
+
+          <div class="form-group" style="margin-top:8px;">
+            <label>Espaçamento entre Rebites (mm)</label>
+            <input type="number" id="param-rivet-dist" value="150" step="25">
+          </div>
+        </div>
+
+        <!-- Facetas Perfuradas (Foto 2) -->
+        <div class="section-card">
+          <div class="section-title">Facetas Perfuradas (Design Acústico)</div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-perforated">
+            <span>Ativar Padrão de Perfuração em Facetas</span>
+          </label>
+        </div>
+
+      </div>
+
+      <!-- ABA 2: PLANIFICAÇÃO 2D & CNC -->
+      <div id="tab-unfold" class="tab-pane">
+        <div class="section-card">
+          <div class="section-title">Especificações da Chapa Planificada</div>
+          <div class="metric-grid">
+            <div class="metric-box">
+              <div class="metric-label">Chapa Bruta CNC</div>
+              <div id="stat-sheet-size" class="metric-value">670 × 1070 mm</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Espessura Padrão</div>
+              <div class="metric-value">ACM 4mm / 0.3</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-title">Camadas de Usinagem CNC (Router)</div>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">
+            O arquivo gerado é compatível com Aspire, ArtCAM, EnRoute e AutoCAD via camadas padronizadas:
+          </p>
+          <ul style="font-size:12px;color:var(--text-main);padding-left:16px;line-height:1.6;">
+            <li><strong style="color:#F8FAFC;">CAMADA_CORTE:</strong> Fresa cilíndrica passante 4mm.</li>
+            <li><strong style="color:#EF4444;">CAMADA_VINCO_V90:</strong> Fresa em V 90° (verso da chapa).</li>
+            <li><strong style="color:#F59E0B;">CAMADA_FUROS:</strong> Broca 4.5mm para rebites de fixação.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ABA 3: MULTIPLICAÇÃO DE PAINEL -->
+      <div id="tab-tessellation" class="tab-pane">
+        <div class="section-card">
+          <div class="section-title">Grade de Multiplicação de Fachada</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Colunas (Horiz.)</label>
+              <input type="number" id="param-cols" value="4" min="1" max="20">
+            </div>
+            <div class="form-group">
+              <label>Linhas (Vert.)</label>
+              <input type="number" id="param-rows" value="3" min="1" max="20">
+            </div>
+            <div class="form-group">
+              <label>Junta / Folga (mm)</label>
+              <input type="number" id="param-gap" value="5" min="0" max="30">
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:14px;">Alternância e Caleidoscópio</div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-flip-x" checked>
+            <span>Espelhar Horizontalmente em Colunas Ímpares (Flip X)</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-flip-y">
+            <span>Espelhar Verticalmente em Linhas Ímpares (Flip Y)</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="check-rotate">
+            <span>Giro de 180° em Blocos Alternados</span>
+          </label>
+        </div>
+
+        <div class="section-card">
+          <div class="section-title">Dimensionamento por Vão Total</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Largura Total da Fachada (mm)</label>
+              <input type="number" id="param-total-w" value="3000" step="100">
+            </div>
+            <div class="form-group">
+              <label>Altura Total da Fachada (mm)</label>
+              <input type="number" id="param-total-h" value="2500" step="100">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 4: BIBLIOTECA DE MODELOS -->
+      <div id="tab-library" class="tab-pane">
+        <div class="section-card">
+          <div class="section-title">
+            <span>Modelos Salvos</span>
+            <button id="btn-save-preset" class="btn btn-secondary" style="padding:3px 8px;font-size:11px;">+ Salvar Atual</button>
+          </div>
+          <div id="presets-list" class="library-grid">
+            <!-- Injetado via JS -->
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Rodapé / Barra de Ações Rápidas -->
+  <footer>
+    <div class="actions-left">
+      <button id="btn-build-sketchup" class="btn btn-primary">
+        <span>Criar Bloco 3D no SketchUp</span>
+      </button>
+      <button id="btn-multiply-panel" class="btn btn-blue">
+        <span>Multiplicar Painel</span>
+      </button>
+    </div>
+
+    <div class="actions-right">
+      <button id="btn-place-unfolded" class="btn btn-secondary">
+        <span>Planificar 2D</span>
+      </button>
+      <button id="btn-export-dxf" class="btn btn-secondary">
+        <span>Exportar DXF CNC</span>
+      </button>
+    </div>
+  </footer>
+
+  <script src="three_viewer.js"></script>
+  <script src="dialog.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "Pirâmide Facetada Truncada",
+  "typology": "pyramid",
+  "description": "Bloco com 4 faces inclinadas e topo plano para composição minimalista.",
+  "params": {
+    "typology": "pyramid",
+    "width": 600.0,
+    "height": 600.0,
+    "depth": 100.0,
+    "center_x_ratio": 0.5,
+    "center_y_ratio": 0.5,
+    "top_width": 150.0,
+    "top_height": 150.0,
+    "flange_width": 30.0,
+    "relief_angle": 45.0,
+    "rivet_holes": true,
+    "rivet_spacing": 150.0,
+    "rivet_dia": 4.5
+  }
+}

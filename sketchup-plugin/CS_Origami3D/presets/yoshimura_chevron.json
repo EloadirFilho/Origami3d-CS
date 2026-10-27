@@ -1,0 +1,18 @@
+{
+  "name": "Yoshimura Chevron (Espinha de Peixe)",
+  "typology": "yoshimura_chevron",
+  "description": "Tesselação contínua estilo origami sanfonado com cristas e vales (Visual idêntico à foto 5).",
+  "params": {
+    "typology": "yoshimura_chevron",
+    "width": 800.0,
+    "height": 1200.0,
+    "depth": 130.0,
+    "chevron_rows": 4,
+    "chevron_cols": 2,
+    "flange_width": 30.0,
+    "relief_angle": 45.0,
+    "rivet_holes": true,
+    "rivet_spacing": 150.0,
+    "rivet_dia": 4.5
+  }
+}

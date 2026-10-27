@@ -1,0 +1,22 @@
+{
+  "name": "Facetas Perfuradas Acústicas",
+  "typology": "diamond_classic",
+  "description": "Bloco com padrão de furos para fachadas ventiladas, acústica e iluminação interna (Foto 2).",
+  "params": {
+    "typology": "diamond_classic",
+    "width": 600.0,
+    "height": 1000.0,
+    "depth": 150.0,
+    "center_x_ratio": 0.5,
+    "center_y_ratio": 0.5,
+    "flange_width": 35.0,
+    "relief_angle": 45.0,
+    "rivet_holes": true,
+    "rivet_spacing": 150.0,
+    "rivet_dia": 4.5,
+    "perforated": true,
+    "perforated_faces": [0, 4],
+    "perf_hole_dia": 8.0,
+    "perf_pitch": 18.0
+  }
+}
