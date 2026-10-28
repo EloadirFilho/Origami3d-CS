@@ -82,6 +82,14 @@ class Origami3DViewer {
     this.sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
     this.sunLight.position.set(500, 800, 1000);
     this.sunLight.castShadow = true;
+    // A câmera de sombra padrão cobre só ±5 unidades; a cena está em mm (blocos de até ~2 m)
+    const shadowCam = this.sunLight.shadow.camera;
+    shadowCam.left = shadowCam.bottom = -1500;
+    shadowCam.right = shadowCam.top = 1500;
+    shadowCam.near = 10;
+    shadowCam.far = 5000;
+    this.sunLight.shadow.mapSize.set(2048, 2048);
+    this.sunLight.shadow.bias = -0.0005;
     this.scene.add(this.sunLight);
 
     // Luz de preenchimento (Fill light)
@@ -90,8 +98,10 @@ class Origami3DViewer {
     this.scene.add(fillLight);
   }
 
+  // Criados uma única vez: recriar a cada atualização vazava materiais na GPU
   getMaterials() {
-    return {
+    if (this.materials) return this.materials;
+    this.materials = {
       red_glossy: new THREE.MeshStandardMaterial({
         color: 0xDC2626,
         roughness: 0.18,
@@ -129,6 +139,7 @@ class Origami3DViewer {
         side: THREE.DoubleSide
       })
     };
+    return this.materials;
   }
 
   setMaterial(materialKey) {

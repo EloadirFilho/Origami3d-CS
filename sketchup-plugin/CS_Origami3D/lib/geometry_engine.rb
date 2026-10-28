@@ -3,9 +3,12 @@
 # CS_Origami3D - Motor Geométrico Paramétrico de Facetas e Origami
 # ==============================================================================
 
+require 'json'
+
 module CS_Origami3D
   class GeometryEngine
     ATTR_DICT = 'CS_Origami3D_Block'.freeze
+    MIN_SIZE_MM = 10.0
 
     # Estrutura de retorno para geometria do bloco
     # vertices: Array de [x, y, z] em milímetros
@@ -15,8 +18,9 @@ module CS_Origami3D
     
     def self.generate_block_mesh(params)
       typology = params[:typology] || 'diamond_classic'
-      w = (params[:width] || 600.0).to_f
-      h = (params[:height] || 1000.0).to_f
+      # Medidas nulas/negativas (campo vazio na UI) gerariam facetas degeneradas
+      w = [(params[:width] || 600.0).to_f, MIN_SIZE_MM].max
+      h = [(params[:height] || 1000.0).to_f, MIN_SIZE_MM].max
       depth = (params[:depth] || 150.0).to_f
 
       case typology
@@ -369,11 +373,51 @@ module CS_Origami3D
     # --------------------------------------------------------------------------
     # CONSTRUIR BLOCO 3D NATIVO NO SKETCHUP
     # --------------------------------------------------------------------------
-    def self.build_in_sketchup(mesh_data, origin = Geom::Point3d.new(0, 0, 0), tag_name = 'CS_ORIGAMI_3D')
+    def self.build_in_sketchup(mesh_data, origin = Geom::Point3d.new(0, 0, 0))
       model = Sketchup.active_model
       model.start_operation('Criar Bloco Origami 3D', true)
+      begin
+        group = draw_block(model.active_entities, mesh_data, origin)
+        model.commit_operation
+        group
+      rescue
+        model.abort_operation
+        raise
+      end
+    end
 
-      entities = model.active_entities
+    # Grava os parâmetros completos para que planificar/exportar/editar depois
+    # reproduza exatamente o mesmo bloco (não só largura, altura e profundidade).
+    def self.write_block_attributes(entity, mesh_data)
+      entity.set_attribute(ATTR_DICT, 'typology', mesh_data[:typology])
+      entity.set_attribute(ATTR_DICT, 'width_mm', mesh_data[:width])
+      entity.set_attribute(ATTR_DICT, 'height_mm', mesh_data[:height])
+      entity.set_attribute(ATTR_DICT, 'depth_mm', mesh_data[:depth])
+      entity.set_attribute(ATTR_DICT, 'total_area_m2', (mesh_data[:total_area] / 1_000_000.0).round(4))
+      entity.set_attribute(ATTR_DICT, 'params_json', JSON.generate(mesh_data[:params] || {}))
+    end
+
+    # Lê os parâmetros de um grupo Origami ou de uma instância de painel
+    # (nesse caso os atributos ficam na definição). Retorna nil se não for um bloco.
+    def self.block_params(entity)
+      sources = [entity]
+      sources << entity.definition if entity.is_a?(Sketchup::ComponentInstance)
+      src = sources.find { |e| e.get_attribute(ATTR_DICT, 'typology') }
+      return nil unless src
+
+      params = begin
+        JSON.parse(src.get_attribute(ATTR_DICT, 'params_json') || '{}', symbolize_names: true)
+      rescue JSON::ParserError
+        {}
+      end
+      params[:typology] = src.get_attribute(ATTR_DICT, 'typology')
+      params[:width]  = src.get_attribute(ATTR_DICT, 'width_mm')
+      params[:height] = src.get_attribute(ATTR_DICT, 'height_mm')
+      params[:depth]  = src.get_attribute(ATTR_DICT, 'depth_mm')
+      params
+    end
+
+    def self.draw_block(entities, mesh_data, origin)
       group = entities.add_group
       group.name = "Origami_#{mesh_data[:typology]}_#{mesh_data[:width].to_i}x#{mesh_data[:height].to_i}"
 
@@ -409,14 +453,7 @@ module CS_Origami3D
         edge.smooth = false
       end
 
-      # Gravar Atributos
-      group.set_attribute(ATTR_DICT, 'typology', mesh_data[:typology])
-      group.set_attribute(ATTR_DICT, 'width_mm', mesh_data[:width])
-      group.set_attribute(ATTR_DICT, 'height_mm', mesh_data[:height])
-      group.set_attribute(ATTR_DICT, 'depth_mm', mesh_data[:depth])
-      group.set_attribute(ATTR_DICT, 'total_area_m2', (mesh_data[:total_area] / 1_000_000.0).round(4))
-
-      model.commit_operation
+      write_block_attributes(group, mesh_data)
       group
     end
   end

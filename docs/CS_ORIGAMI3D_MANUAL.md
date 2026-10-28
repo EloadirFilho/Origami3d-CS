@@ -1,4 +1,4 @@
-# Manual de Uso & Guia Técnico — CS Origami 3D (v1.0.0)
+# Manual de Uso & Guia Técnico — CS Origami 3D (v1.0.1)
 
 Extensão autônoma para **Trimble SketchUp** especializada em modelagem volumétrica facetada, origami arquitetônico em ACM (Material Composto de Alumínio), planificação 2D com abas e usinagem CNC Router (DXF AC1009).
 
@@ -10,7 +10,7 @@ Extensão autônoma para **Trimble SketchUp** especializada em modelagem volumé
 2. Vá no menu: `Janela` > `Gerenciador de Extensões` (ou `Extensões` > `Gerenciador de Extensões`).
 3. Clique no botão vermelho **"Instalar Extensão"** no canto inferior esquerdo.
 4. Selecione o arquivo compilado:
-   `CS_Origami3D_v1.0.0.rbz`
+   `CS_Origami3D_v1.0.1.rbz`
 5. A barra de ferramentas **CS Origami 3D** e o menu `Extensões > CS Origami 3D · Volumetria ACM` aparecerão imediatamente.
 
 ---
@@ -53,6 +53,7 @@ Gera arquivos prontos para carregar diretamente nos softwares CAM de fresadoras 
 | `CAMADA_CORTE` | Branco (7) | Fresa cilíndrica de topo 4mm (Corte passante total) |
 | `CAMADA_VINCO_V90` | Vermelho (1) | Fresa em V 90° (Usinagem no verso, preserva lâmina de alumínio) |
 | `CAMADA_VINCO_ANGULAR` | Verde (3) | Fresa em V para ângulos agudos/obtusos calculados |
+| `CAMADA_VINCO_VALE` | Magenta (6) | Fresa em V pela **frente** da chapa (dobras em vale) |
 | `CAMADA_FUROS` | Amarelo (2) | Broca CNC de furação para rebites e alívios |
 | `CAMADA_TEXTOS` | Ciano (4) | Etiquetas, dimensões da chapa bruta e identificação |
 

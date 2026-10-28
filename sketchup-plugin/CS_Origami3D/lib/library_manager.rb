@@ -128,6 +128,7 @@ module CS_Origami3D
             center_y_ratio: 0.5,
             flange_width: 35.0,
             rivet_holes: true,
+            perforated: true,
             perforated_faces: [0, 4], # Faces Sul-Oeste e Norte-Leste com perfuração
             perf_hole_dia: 8.0,
             perf_pitch: 18.0

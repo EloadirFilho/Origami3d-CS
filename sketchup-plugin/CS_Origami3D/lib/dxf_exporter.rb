@@ -25,12 +25,23 @@ module CS_Origami3D
       lines << "70\n4" # 4 = Milímetros
       lines << "0\nENDSEC"
 
-      # 2. TABLES (Definição de Camadas / Cores)
+      # 2. TABLES (Tipo de Linha, Camadas / Cores)
       lines << "0\nSECTION"
       lines << "2\nTABLES"
       lines << "0\nTABLE"
+      lines << "2\nLTYPE"
+      lines << "70\n1"
+      lines << "0\nLTYPE"
+      lines << "2\nCONTINUOUS"
+      lines << "70\n0"
+      lines << "3\nSolid line"
+      lines << "72\n65"
+      lines << "73\n0"
+      lines << "40\n0.0"
+      lines << "0\nENDTAB"
+      lines << "0\nTABLE"
       lines << "2\nLAYER"
-      lines << "70\n5"
+      lines << "70\n6"
 
       # Layer CAMADA_CORTE (Branco / Cor 7)
       add_layer_def(lines, 'CAMADA_CORTE', 7)
@@ -38,6 +49,8 @@ module CS_Origami3D
       add_layer_def(lines, 'CAMADA_VINCO_V90', 1)
       # Layer CAMADA_VINCO_ANGULAR (Verde / Cor 3)
       add_layer_def(lines, 'CAMADA_VINCO_ANGULAR', 3)
+      # Layer CAMADA_VINCO_VALE (Magenta / Cor 6): dobra para o lado oposto, fresar pela FRENTE
+      add_layer_def(lines, 'CAMADA_VINCO_VALE', 6)
       # Layer CAMADA_FUROS (Amarelo / Cor 2)
       add_layer_def(lines, 'CAMADA_FUROS', 2)
       # Layer CAMADA_TEXTOS (Ciano / Cor 4)
@@ -70,8 +83,19 @@ module CS_Origami3D
       # (B) Linhas de Vinco em V Internas das Facetas
       unfold_data[:fold_lines].each do |fl|
         ang = fl[:angle] || 90.0
-        layer = (ang - 90.0).abs < 5.0 ? 'CAMADA_VINCO_V90' : 'CAMADA_VINCO_ANGULAR'
+        layer = if fl[:type] == 'valley'
+          'CAMADA_VINCO_VALE'
+        elsif (ang - 90.0).abs < 5.0
+          'CAMADA_VINCO_V90'
+        else
+          'CAMADA_VINCO_ANGULAR'
+        end
         add_line_entity(lines, layer, fl[:start][0], fl[:start][1], fl[:end][0], fl[:end][1])
+      end
+
+      # (B2) Emendas: arestas internas abertas na planificação viram corte passante
+      (unfold_data[:seam_lines] || []).each do |sl|
+        add_line_entity(lines, 'CAMADA_CORTE', sl[:start][0], sl[:start][1], sl[:end][0], sl[:end][1])
       end
 
       # (C) Furações para Rebites
@@ -102,6 +126,11 @@ module CS_Origami3D
     end
 
     private
+
+    # DXF R12 não tem UTF-8: remove acentos e qualquer caractere fora do ASCII
+    def self.ascii(text)
+      text.to_s.unicode_normalize(:nfd).gsub(/[^\x20-\x7E]/, '')
+    end
 
     def self.add_layer_def(lines, name, color)
       lines << "0\nLAYER"
@@ -138,7 +167,7 @@ module CS_Origami3D
       lines << "20\n#{format('%.3f', y)}"
       lines << "30\n0.000"
       lines << "40\n#{format('%.3f', height)}"
-      lines << "1\n#{text}"
+      lines << "1\n#{ascii(text)}"
     end
   end
 end

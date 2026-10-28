@@ -9,7 +9,7 @@ require 'extensions.rb'
 module CS_Origami3D
   PLUGIN_ID          = 'CS_Origami3D'.freeze
   PLUGIN_NAME        = 'CS Origami 3D · Volumetria & Facetação em ACM'.freeze
-  PLUGIN_VERSION     = '1.0.0'.freeze
+  PLUGIN_VERSION     = '1.0.1'.freeze
   PLUGIN_DESCRIPTION = 'Criação paramétrica de blocos volumétricos facetados (Origami Arquitetônico em ACM), estúdio 3D em tempo real, multiplicação de painéis, desdobramento/planificação 2D e exportação para CNC Router DXF.'.freeze
   PLUGIN_AUTHOR      = 'CS Comunicação / Totem ERP'.freeze
   PLUGIN_COPYRIGHT   = '© 2026 CS Comunicação'.freeze

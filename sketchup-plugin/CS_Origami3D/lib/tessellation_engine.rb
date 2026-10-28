@@ -3,12 +3,25 @@
 # CS_Origami3D - Motor de Multiplicação de Blocos e Tesselagem de Painéis
 # ==============================================================================
 
+require 'json'
+require 'digest'
+
 module CS_Origami3D
   class TessellationEngine
     def self.generate_panel(mesh_data, options = {}, origin = Geom::Point3d.new(0, 0, 0))
       model = Sketchup.active_model
       model.start_operation('Multiplicar Painel Origami 3D', true)
+      begin
+        panel_group = build_panel(model, mesh_data, options, origin)
+        model.commit_operation
+        panel_group
+      rescue
+        model.abort_operation
+        raise
+      end
+    end
 
+    def self.build_panel(model, mesh_data, options, origin)
       mode = options[:sizing_mode] || 'by_count' # 'by_count' ou 'by_total_size'
       gap_mm = (options[:joint_gap_mm] || 5.0).to_f # Junta de dilatação entre blocos
 
@@ -93,15 +106,16 @@ module CS_Origami3D
 
       # Mover para a origem solicitada
       panel_group.transform!(Geom::Transformation.translation(origin.to_a))
-
-      model.commit_operation
       panel_group
     end
 
     private
 
     def self.create_block_definition(model, mesh_data)
-      name = "CS_Origami_Def_#{mesh_data[:typology]}_#{mesh_data[:width].to_i}x#{mesh_data[:height].to_i}"
+      # O nome inclui um resumo da geometria: blocos com mesma largura/altura mas
+      # profundidade ou ápice diferentes não podem reaproveitar a mesma definição.
+      digest = Digest::MD5.hexdigest(JSON.generate([mesh_data[:vertices], mesh_data[:faces]]))[0, 8]
+      name = "CS_Origami_Def_#{mesh_data[:typology]}_#{mesh_data[:width].to_i}x#{mesh_data[:height].to_i}_#{digest}"
       existing = model.definitions[name]
       return existing if existing && !existing.deleted?
 
@@ -120,6 +134,7 @@ module CS_Origami3D
         end
       end
 
+      GeometryEngine.write_block_attributes(comp_def, mesh_data)
       comp_def
     end
   end

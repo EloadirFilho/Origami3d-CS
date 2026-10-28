@@ -14,6 +14,45 @@ require File.join(CS_Origami3D::PLUGIN_DIR, 'lib', 'library_manager')
 require File.join(CS_Origami3D::PLUGIN_DIR, 'lib', 'studio_dialog')
 
 module CS_Origami3D
+  # Primeiro grupo ou instância de painel Origami na seleção atual
+  def self.selected_block
+    Sketchup.active_model.selection.find do |e|
+      (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) && GeometryEngine.block_params(e)
+    end
+  end
+
+  def self.unfold_block(entity)
+    params = GeometryEngine.block_params(entity)
+    mesh = GeometryEngine.generate_block_mesh(params)
+    unfold = UnfoldEngine.unfold_mesh(mesh, params)
+    origin = Geom::Point3d.new(entity.bounds.max.x + (100.0 / 25.4), entity.bounds.min.y, 0)
+    UnfoldEngine.place_unfolded_in_sketchup(unfold, origin)
+    msg = "Chapa planificada inserida ao lado do bloco selecionado!"
+    msg += "\n\n#{StudioDialog.overlap_warning(unfold)}" unless unfold[:overlaps].empty?
+    UI.messagebox(msg)
+  rescue => e
+    StudioDialog.report_error('Planificar bloco', e)
+  end
+
+  def self.export_block_dxf(entity)
+    params = GeometryEngine.block_params(entity)
+    mesh = GeometryEngine.generate_block_mesh(params)
+    unfold = UnfoldEngine.unfold_mesh(mesh, params)
+    typ = mesh[:typology]
+    filepath = UI.savepanel('Exportar DXF CNC', '', "Origami_#{typ}_#{mesh[:width].to_i}x#{mesh[:height].to_i}.dxf")
+    return unless filepath && !filepath.empty?
+
+    filepath += '.dxf' unless filepath.downcase.end_with?('.dxf')
+    DxfExporter.export_to_file(filepath, unfold, { name: "Bloco_#{typ}" })
+    UI.messagebox("DXF exportado com sucesso em:\n#{filepath}")
+  rescue => e
+    StudioDialog.report_error('Exportar DXF', e)
+  end
+
+  def self.icon(name)
+    File.join(PLUGIN_DIR, 'icons', "#{name}.svg")
+  end
+
   unless file_loaded?(__FILE__)
     # --------------------------------------------------------------------------
     # 1. MENU SUPERIOR EM EXTENSÕES
@@ -37,44 +76,13 @@ module CS_Origami3D
     main_menu.add_separator
 
     main_menu.add_item('Planificar Bloco Selecionado na Cena') do
-      model = Sketchup.active_model
-      sel = model.selection.grep(Sketchup::Group).find { |g| g.get_attribute(GeometryEngine::ATTR_DICT, 'typology') }
-      if sel
-        w = sel.get_attribute(GeometryEngine::ATTR_DICT, 'width_mm') || 600.0
-        h = sel.get_attribute(GeometryEngine::ATTR_DICT, 'height_mm') || 1000.0
-        d = sel.get_attribute(GeometryEngine::ATTR_DICT, 'depth_mm') || 150.0
-        typ = sel.get_attribute(GeometryEngine::ATTR_DICT, 'typology') || 'diamond_classic'
-
-        mesh = GeometryEngine.generate_block_mesh({ width: w, height: h, depth: d, typology: typ })
-        unfold = UnfoldEngine.unfold_mesh(mesh)
-        origin = Geom::Point3d.new(sel.bounds.max.x + (100.0 / 25.4), sel.bounds.min.y, 0)
-        UnfoldEngine.place_unfolded_in_sketchup(unfold, origin)
-        UI.messagebox("Chapa planificada inserida ao lado do bloco selecionado!")
-      else
-        UI.messagebox("Selecione um bloco Origami 3D para planificar.")
-      end
+      sel = selected_block
+      sel ? unfold_block(sel) : UI.messagebox("Selecione um bloco Origami 3D para planificar.")
     end
 
     main_menu.add_item('Exportar DXF CNC do Bloco Selecionado…') do
-      model = Sketchup.active_model
-      sel = model.selection.grep(Sketchup::Group).find { |g| g.get_attribute(GeometryEngine::ATTR_DICT, 'typology') }
-      if sel
-        w = sel.get_attribute(GeometryEngine::ATTR_DICT, 'width_mm') || 600.0
-        h = sel.get_attribute(GeometryEngine::ATTR_DICT, 'height_mm') || 1000.0
-        d = sel.get_attribute(GeometryEngine::ATTR_DICT, 'depth_mm') || 150.0
-        typ = sel.get_attribute(GeometryEngine::ATTR_DICT, 'typology') || 'diamond_classic'
-
-        mesh = GeometryEngine.generate_block_mesh({ width: w, height: h, depth: d, typology: typ })
-        unfold = UnfoldEngine.unfold_mesh(mesh)
-        filepath = UI.savepanel('Exportar DXF CNC', '', "Origami_#{typ}_#{w.to_i}x#{h.to_i}.dxf")
-        if filepath && !filepath.empty?
-          filepath += '.dxf' unless filepath.downcase.end_with?('.dxf')
-          DxfExporter.export_to_file(filepath, unfold, { name: "Bloco_#{typ}" })
-          UI.messagebox("DXF exportado com sucesso em:\n#{filepath}")
-        end
-      else
-        UI.messagebox("Selecione um bloco Origami 3D para exportar DXF.")
-      end
+      sel = selected_block
+      sel ? export_block_dxf(sel) : UI.messagebox("Selecione um bloco Origami 3D para exportar DXF.")
     end
 
     # --------------------------------------------------------------------------
@@ -82,30 +90,31 @@ module CS_Origami3D
     # --------------------------------------------------------------------------
     toolbar = UI::Toolbar.new('CS Origami 3D')
 
-    cmd_studio = UI::Command.new('Estúdio Origami 3D') do
+    add_command = lambda do |label, icon_name, tooltip, status, &block|
+      cmd = UI::Command.new(label, &block)
+      cmd.small_icon = cmd.large_icon = icon(icon_name)
+      cmd.tooltip = tooltip
+      cmd.status_bar_text = status
+      toolbar.add_item(cmd)
+    end
+
+    add_command.call('Estúdio Origami 3D', 'studio', 'Estúdio de Criação de Blocos Origami 3D em ACM',
+                     'Abre a interface interativa com visualizador WebGL ao vivo.') do
       StudioDialog.show('creator')
     end
-    cmd_studio.tooltip = 'Estúdio de Criação de Blocos Origami 3D em ACM'
-    cmd_studio.status_bar_text = 'Abre a interface interativa com visualizador WebGL ao vivo.'
-    toolbar.add_item(cmd_studio)
-
-    cmd_panel = UI::Command.new('Multiplicar Painel') do
+    add_command.call('Multiplicar Painel', 'panel', 'Multiplicar Blocos em Matriz de Fachada',
+                     'Abre o estúdio na aba de multiplicação de painel.') do
       StudioDialog.show('tessellation')
     end
-    cmd_panel.tooltip = 'Multiplicar Blocos em Matriz de Fachada'
-    toolbar.add_item(cmd_panel)
-
-    cmd_unfold = UI::Command.new('Planificar 2D') do
+    add_command.call('Planificar 2D', 'unfold', 'Planificar Chapa 2D com Abas Perimetrais',
+                     'Abre o estúdio na aba de planificação 2D.') do
       StudioDialog.show('unfold')
     end
-    cmd_unfold.tooltip = 'Planificar Chapa 2D com Abas Perimetrais'
-    toolbar.add_item(cmd_unfold)
-
-    cmd_dxf = UI::Command.new('Exportar DXF CNC') do
-      StudioDialog.show('dxf')
+    add_command.call('Exportar DXF CNC', 'dxf', 'Exportar Arquivo DXF com Camadas para Router CNC',
+                     'Exporta o DXF do bloco selecionado, ou abre o estúdio se nada estiver selecionado.') do
+      sel = selected_block
+      sel ? export_block_dxf(sel) : StudioDialog.show('unfold')
     end
-    cmd_dxf.tooltip = 'Exportar Arquivo DXF com Camadas para Router CNC'
-    toolbar.add_item(cmd_dxf)
 
     toolbar.restore if toolbar.get_last_state == TB_VISIBLE
 
@@ -113,37 +122,17 @@ module CS_Origami3D
     # 3. MENU DE CONTEXTO (CLIQUE COM BOTÃO DIREITO)
     # --------------------------------------------------------------------------
     UI.add_context_menu_handler do |context_menu|
-      model = Sketchup.active_model
-      sel = model.selection.grep(Sketchup::Group).find { |g| g.get_attribute(GeometryEngine::ATTR_DICT, 'typology') }
+      sel = selected_block
       if sel
         sub = context_menu.add_submenu('CS Origami 3D')
         sub.add_item('Editar Bloco no Estúdio…') do
-          StudioDialog.show('creator')
+          StudioDialog.show('creator', GeometryEngine.block_params(sel))
         end
         sub.add_item('Planificar Chapa 2D deste Bloco') do
-          w = sel.get_attribute(GeometryEngine::ATTR_DICT, 'width_mm') || 600.0
-          h = sel.get_attribute(GeometryEngine::ATTR_DICT, 'height_mm') || 1000.0
-          d = sel.get_attribute(GeometryEngine::ATTR_DICT, 'depth_mm') || 150.0
-          typ = sel.get_attribute(GeometryEngine::ATTR_DICT, 'typology') || 'diamond_classic'
-
-          mesh = GeometryEngine.generate_block_mesh({ width: w, height: h, depth: d, typology: typ })
-          unfold = UnfoldEngine.unfold_mesh(mesh)
-          origin = Geom::Point3d.new(sel.bounds.max.x + (100.0 / 25.4), sel.bounds.min.y, 0)
-          UnfoldEngine.place_unfolded_in_sketchup(unfold, origin)
+          unfold_block(sel)
         end
         sub.add_item('Exportar DXF CNC deste Bloco…') do
-          w = sel.get_attribute(GeometryEngine::ATTR_DICT, 'width_mm') || 600.0
-          h = sel.get_attribute(GeometryEngine::ATTR_DICT, 'height_mm') || 1000.0
-          d = sel.get_attribute(GeometryEngine::ATTR_DICT, 'depth_mm') || 150.0
-          typ = sel.get_attribute(GeometryEngine::ATTR_DICT, 'typology') || 'diamond_classic'
-
-          mesh = GeometryEngine.generate_block_mesh({ width: w, height: h, depth: d, typology: typ })
-          unfold = UnfoldEngine.unfold_mesh(mesh)
-          filepath = UI.savepanel('Exportar DXF CNC', '', "Origami_#{typ}_#{w.to_i}x#{h.to_i}.dxf")
-          if filepath && !filepath.empty?
-            filepath += '.dxf' unless filepath.downcase.end_with?('.dxf')
-            DxfExporter.export_to_file(filepath, unfold, { name: "Bloco_#{typ}" })
-          end
+          export_block_dxf(sel)
         end
       end
     end
